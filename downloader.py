@@ -40,9 +40,9 @@ def download_song(video_url):
     clip.audio.write_audiofile(output_path + '/' + stream.title + '.mp3')
 
 if __name__ == '__main__':
-    if os.path.exists('o'): shutil.rmtree('o')
-    with Executor() as executor:
-        executor.map(download_song, playlist.video_urls)
+    # if os.path.exists('o'): shutil.rmtree('o')
+    # with Executor() as executor:
+    #     executor.map(download_song, playlist.video_urls)
     videos = [f for f in os.listdir(output_path) if os.path.isfile(os.path.join(output_path, f)) and os.path.splitext(f)[-1] == '.mp4']
     for video in videos: 
         os.remove(output_path + '/' + video)
