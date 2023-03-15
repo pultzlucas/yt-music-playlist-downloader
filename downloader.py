@@ -3,18 +3,13 @@ from termcolor import colored
 from concurrent.futures.process import ProcessPoolExecutor as Executor
 import os
 import shutil
-import eyed3
-from eyed3.id3.frames import ImageFrame
+from eyed3 import id3
 import requests
-from PIL import Image
+import eyed3
 
-# str(input('Playlist url: '))
-playlist_url = 'https://music.youtube.com/playlist?list=PLV1qTAR8p8phZ2kv0LyTvbZwb2XUNEQ5K'
-output_path = 'o'  # str(input('Output path: '))
-playlist = Playlist(playlist_url)
-
-print('Number of videos in playlist: %s' % len(playlist.video_urls))
-print(colored('Downloading playlist: ', 'yellow') + playlist.title)
+playlist_url = None
+playlist = None
+output_folder_path = 'Output'
 
 def add_tags_to_audio_file():
     pass
@@ -25,10 +20,6 @@ def download_video_thumbnail(video_title, thumb_url):
     path = f'./Thumbs/{video_title}.jpg'
     with open(path, 'wb') as handler:
         handler.write(img_data)
-    # foo = Image.open(path)
-    # foo = foo.resize((100, 200), Image.ANTIALIAS)
-    # foo.save(path, optimize=True, quality=95)
-    # print(foo.size)
     return path
 
 def download_song(video_url):
@@ -40,27 +31,32 @@ def download_song(video_url):
     filename = stream.title + '.mp3'
 
     thumb_path = download_video_thumbnail(stream.title, video.thumbnail_url)
-    stream.download(output_path, filename)
+    stream.download(output_folder_path, filename)
 
-    audio = eyed3.load(output_path + '/' + filename)
-    
-    # if audio == None:
-    #     print(os.path.exists('./' + output_path + '/' + filename), './' + output_path + '/' + filename)
-    #     print(stream.title)
+    # Adding Tags to audio file
+    tag = id3.Tag()
+    tag.parse(output_folder_path + '/' + filename)
+    tag.title = u'' + stream.title
+    tag.album = u'' + output_folder_path
+    tag.artist = u'' + video.author
+    tag.images.set(3, open(thumb_path, 'rb').read(), 'image/jpeg')
+    tag.save(version=eyed3.id3.ID3_V2_3)
 
-    if not audio == None:
-        audio.initTag()
-        audio.tag.title = u'' + stream.title
-        audio.tag.album = u'' + playlist.title
-        audio.tag.images.set(3, open(thumb_path, 'rb').read(), 'image/jpeg')
-        audio.tag.save(version=eyed3.id3.ID3_V2_3)
 
+def main():
+    # Playlist Example: https://music.youtube.com/playlist?list=PLV1qTAR8p8phZ2kv0LyTvbZwb2XUNEQ5K
+
+    playlist_url = str(input('Playlist url: ')) 
+    playlist = Playlist(playlist_url)
+
+    print('Number of videos in playlist: %s' % len(playlist.video_urls))
+    print(colored('Downloading playlist: ', 'yellow') + playlist.title)
+
+    if os.path.exists('Thumbs'): shutil.rmtree('Thumbs')
+    if os.path.exists(output_folder_path): shutil.rmtree(output_folder_path)
+
+    with Executor() as executor:
+        executor.map(download_song, playlist.video_urls)
 
 if __name__ == '__main__':
-    if os.path.exists(output_path): shutil.rmtree(output_path)
-    if os.path.exists('Thumbs'): shutil.rmtree('Thumbs')
-
-    # with Executor() as executor:
-        # executor.map(download_song, playlist.video_urls)
-    for song in playlist.video_urls:
-        download_song(song)
+    main()
